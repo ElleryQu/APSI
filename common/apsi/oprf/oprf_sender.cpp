@@ -91,17 +91,26 @@ namespace apsi {
                 for (size_t idx = start_idx; idx < query_count; idx += step) {
                     // Load the point from input buffer
                     ECPoint ecpt;
-                    ecpt.load(ECPoint::point_save_span_const_type{
-                        oprf_in_ptr + idx * oprf_query_size, oprf_query_size });
-
-                    // Multiply with key
-                    if (!ecpt.scalar_multiply(oprf_key.key_span(), true)) {
-                        throw logic_error("scalar multiplication failed due to invalid query data");
+                    {
+                        // STOPWATCH(sender_stopwatch, "ECPoint::load, OPRFSender::ProcessQueries");
+                        ecpt.load(ECPoint::point_save_span_const_type{
+                            oprf_in_ptr + idx * oprf_query_size, oprf_query_size });
                     }
 
-                    // Save the result to oprf_responses
-                    ecpt.save(ECPoint::point_save_span_type{
-                        oprf_out_ptr + idx * oprf_response_size, oprf_response_size });
+                    {
+                        // STOPWATCH(sender_stopwatch, "ECPoint::scalar_multiply, OPRFSender::ProcessQueries");
+                        // Multiply with key
+                        if (!ecpt.scalar_multiply(oprf_key.key_span(), true)) {
+                            throw logic_error("scalar multiplication failed due to invalid query data");
+                        }
+                    }
+
+                    {
+                        // STOPWATCH(sender_stopwatch, "ECPoint::save, OPRFSender::ProcessQueries");
+                        // Save the result to oprf_responses
+                        ecpt.save(ECPoint::point_save_span_type{
+                            oprf_out_ptr + idx * oprf_response_size, oprf_response_size });
+                    }
                 }
             };
 
@@ -124,11 +133,17 @@ namespace apsi {
             ECPoint ecpt(item.get_as<const unsigned char>());
 
             // Multiply with key
-            ecpt.scalar_multiply(oprf_key.key_span(), true);
+            {
+                STOPWATCH(sender_stopwatch, "ECPoint::scalar_multiply, OPRFSender::GetItemHash");
+                ecpt.scalar_multiply(oprf_key.key_span(), true);
+            }
 
             // Extract the item hash and the label encryption key
             array<unsigned char, ECPoint::hash_size> item_hash_and_label_key;
-            ecpt.extract_hash(item_hash_and_label_key);
+            {
+                STOPWATCH(sender_stopwatch, "ECPoint::extract_hash, OPRFSender::GetItemHash");
+                ecpt.extract_hash(item_hash_and_label_key);
+            }
 
             // The first 128 bits represent the item hash; the next 128 bits represent the
             // label encryption key.

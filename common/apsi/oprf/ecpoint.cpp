@@ -8,6 +8,7 @@
 // APSI
 #include "apsi/oprf/ecpoint.h"
 #include "apsi/util/utils.h"
+#include "apsi/util/stopwatch.h"
 
 // FourQ
 #include "apsi/fourq/FourQ.h"
@@ -108,6 +109,7 @@ namespace apsi {
 
         void ECPoint::InvertScalar(scalar_span_const_type in, scalar_span_type out)
         {
+            // STOPWATCH(apsi::util::sender_stopwatch, "ECPoint::InvertScalar");
             to_Montgomery(
                 const_cast<digit_t *>(reinterpret_cast<const digit_t *>(in.data())),
                 reinterpret_cast<digit_t *>(out.data()));
@@ -119,6 +121,7 @@ namespace apsi {
 
         bool ECPoint::scalar_multiply(scalar_span_const_type scalar, bool clear_cofactor)
         {
+            // STOPWATCH(apsi::util::sender_stopwatch, "ECPoint::scalar_multiply");
             // The ecc_mul functions returns false when the input point is not a valid curve point
             point_t pt_P, pt_Q;
             point_type_to_fourq_point(pt_, pt_P);
@@ -141,6 +144,7 @@ namespace apsi {
 
         void ECPoint::save(ostream &stream) const
         {
+            // STOPWATCH(apsi::util::sender_stopwatch, "ECPoint::save");
             auto old_ex_mask = stream.exceptions();
             stream.exceptions(ios_base::failbit | ios_base::badbit);
 
@@ -159,6 +163,7 @@ namespace apsi {
 
         void ECPoint::load(istream &stream)
         {
+            // STOPWATCH(apsi::util::sender_stopwatch, "ECPoint::load");
             auto old_ex_mask = stream.exceptions();
             stream.exceptions(ios_base::failbit | ios_base::badbit);
 
@@ -181,6 +186,7 @@ namespace apsi {
 
         void ECPoint::save(point_save_span_type out) const
         {
+            // STOPWATCH(apsi::util::sender_stopwatch, "ECPoint::save");
             point_t pt;
             point_type_to_fourq_point(pt_, pt);
             encode(pt, out.data());
@@ -188,6 +194,7 @@ namespace apsi {
 
         void ECPoint::load(point_save_span_const_type in)
         {
+            // STOPWATCH(apsi::util::sender_stopwatch, "ECPoint::load");
             point_t pt;
             if (decode(in.data(), pt) != ECCRYPTO_SUCCESS) {
                 throw logic_error("invalid point");
@@ -197,6 +204,7 @@ namespace apsi {
 
         void ECPoint::extract_hash(hash_span_type out) const
         {
+            // STOPWATCH(apsi::util::sender_stopwatch, "ECPoint::extract_hash");
             // Compute a Blake2b hash of the value and expand to hash_size
             point_t pt;
             point_type_to_fourq_point(pt_, pt);

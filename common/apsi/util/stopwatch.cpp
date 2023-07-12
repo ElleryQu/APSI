@@ -24,8 +24,8 @@ namespace apsi {
         void Stopwatch::add_timespan_event(
             const string &name, const time_unit &start, const time_unit &end)
         {
-            uint64_t duration = static_cast<uint64_t>(
-                chrono::duration_cast<chrono::milliseconds>(end - start).count());
+            double duration = 
+                chrono::duration<double, std::milli>(end - start).count();
             lock_guard<mutex> timespan_events_lock(timespan_events_mtx_);
             auto timespan_evt = timespan_events_.find(name);
 
@@ -33,9 +33,10 @@ namespace apsi {
                 // Insert new
                 TimespanSummary summ = { /* name */ name,
                                          /* count */ 1,
-                                         /* average */ static_cast<double>(duration),
+                                         /* average */ duration,
                                          /* min */ duration,
-                                         /* max */ duration };
+                                         /* max */ duration,
+                                         /* sum */ duration };
 
                 timespan_events_[name] = summ;
 
@@ -45,10 +46,10 @@ namespace apsi {
             } else {
                 // Update existing
                 timespan_evt->second.event_count++;
+                timespan_evt->second.sum += duration;
+
                 timespan_evt->second.avg =
-                    (timespan_evt->second.avg * (timespan_evt->second.event_count - 1) +
-                     static_cast<double>(duration)) /
-                    timespan_evt->second.event_count;
+                    timespan_evt->second.sum / timespan_evt->second.event_count;
 
                 if (timespan_evt->second.min > duration) {
                     timespan_evt->second.min = duration;

@@ -59,14 +59,16 @@ vector<string> generate_timespan_report(
 
     for (const auto &timespan : timespans) {
         stringstream ss;
-        ss << setw(max_name_length) << left << timespan.event_name << ": " << setw(5) << right
-           << timespan.event_count << " instances. ";
+        ss << "\033[4;36m" << setw(max_name_length) << left << timespan.event_name << "\033[0m: " << endl 
+           << "\tInstan*:  " << setw(12) << right << timespan.event_count << "   " << endl;
         if (timespan.event_count == 1) {
-            ss << "Duration: " << setw(6) << right << static_cast<int>(timespan.avg) << "ms";
+            ss << "\tDuration:  " << setw(12) << fixed << setprecision(4) << right << timespan.avg << " ms";
         } else {
-            ss << "Average:  " << setw(6) << right << static_cast<int>(timespan.avg)
-               << "ms Minimum: " << setw(6) << right << timespan.min << "ms Maximum: " << setw(6)
-               << right << timespan.max << "ms";
+            ss << "\tAverage:  " << setw(12) << fixed << setprecision(4) << right << timespan.avg << " ms"
+               << "\tDurati*:  " << setw(12) << fixed << setprecision(4) << right << timespan.sum << " ms"
+               << endl
+               << "\tMinimum:  " << setw(12) << fixed << setprecision(4) << right << timespan.min << " ms"
+               << "\tMaximum:  " << setw(12) << fixed << setprecision(4) << right << timespan.max << " ms";
         }
 
         report.push_back(ss.str());
@@ -141,4 +143,19 @@ void throw_if_file_invalid(const string &file_name)
         APSI_LOG_ERROR("File `" << file.string() << "` is not a regular file");
         throw logic_error("invalid file");
     }
+}
+
+string nice_byte_count(uint64_t bytes)
+{
+        stringstream ss;
+        if (bytes >= 1024 * 1024) {
+            ss << fixed << setprecision(3) << setw(10) << right << static_cast<double>(bytes) / 1024 / 1024 << " MB" << defaultfloat;
+        }
+        else if (bytes >= 1024) {
+            ss << fixed << setprecision(3) << setw(10) << right << static_cast<double>(bytes) / 1024 << " KB" << defaultfloat;
+        } 
+        else {
+            ss << fixed << setprecision(3) << setw(10) << right << static_cast<double>(bytes) << " B" << defaultfloat;
+        }
+        return ss.str();
 }

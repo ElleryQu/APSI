@@ -131,6 +131,8 @@ namespace apsi {
 
         PSIParams Receiver::RequestParams(NetworkChannel &chl)
         {
+            STOPWATCH(recv_stopwatch, "Receiver::RequestParams");
+
             // Create parameter request and send to Sender
             chl.send(CreateParamsRequest());
 
@@ -201,6 +203,8 @@ namespace apsi {
         pair<vector<HashedItem>, vector<LabelKey>> Receiver::RequestOPRF(
             const vector<Item> &items, NetworkChannel &chl)
         {
+            STOPWATCH(recv_stopwatch, "Receiver::RequestOPRF");
+
             auto oprf_receiver = CreateOPRFReceiver(items);
 
             // Create OPRF request and send to Sender
@@ -361,6 +365,8 @@ namespace apsi {
             NetworkChannel &chl)
         {
             ThreadPoolMgr tpm;
+
+            STOPWATCH(recv_stopwatch, "Receiver::request_query");
 
             // Create query and send to Sender
             auto query = create_query(items);

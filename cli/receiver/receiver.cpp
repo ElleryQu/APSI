@@ -80,6 +80,9 @@ int remote_query(const CLP &cmd)
     // Connect to the network
     ZMQReceiverChannel channel;
 
+    // eq: comm recorder.
+    uint64_t comm_s_ck, comm_r_ck;
+
     string conn_addr = get_conn_addr(cmd);
     APSI_LOG_INFO("Connecting to " << conn_addr);
     channel.connect(conn_addr);
@@ -90,6 +93,10 @@ int remote_query(const CLP &cmd)
         return -1;
     }
 
+    /**
+     * ============================= 1. Request params. ======================================
+    */
+    comm_s_ck = channel.bytes_sent(), comm_r_ck = channel.bytes_received();
     unique_ptr<PSIParams> params;
     try {
         APSI_LOG_INFO("Sending parameter request");
@@ -99,10 +106,16 @@ int remote_query(const CLP &cmd)
         APSI_LOG_WARNING("Failed to receive valid parameters: " << ex.what());
         return -1;
     }
+    APSI_LOG_INFO("Communication R->S, RequestParams: " << nice_byte_count(channel.bytes_sent() - comm_s_ck));
+    APSI_LOG_INFO("Communication S->R, RequestParams: " << nice_byte_count(channel.bytes_received() - comm_r_ck));
+
 
     ThreadPoolMgr::SetThreadCount(cmd.threads());
     APSI_LOG_INFO("Setting thread count to " << ThreadPoolMgr::GetThreadCount());
 
+    /**
+     * ============================= 2. Load database. ======================================
+    */
     Receiver receiver(*params);
 
     auto [query_data, orig_items] = load_db(cmd.query_file());
@@ -112,6 +125,10 @@ int remote_query(const CLP &cmd)
         return -1;
     }
 
+    /**
+     * ============================= 3. Request OPRF. ======================================
+    */
+    comm_s_ck = channel.bytes_sent(), comm_r_ck = channel.bytes_received();
     auto &items = get<CSVReader::UnlabeledData>(*query_data);
     vector<Item> items_vec(items.begin(), items.end());
     vector<HashedItem> oprf_items;
@@ -124,7 +141,13 @@ int remote_query(const CLP &cmd)
         APSI_LOG_WARNING("OPRF request failed: " << ex.what());
         return -1;
     }
+    APSI_LOG_INFO("Communication R->S, RequestOPRF: " << nice_byte_count(channel.bytes_sent() - comm_s_ck));
+    APSI_LOG_INFO("Communication S->R, RequestOPRF: " << nice_byte_count(channel.bytes_received() - comm_r_ck));
 
+    /**
+     * ============================= 4. Request Query. ======================================
+    */
+    comm_s_ck = channel.bytes_sent(), comm_r_ck = channel.bytes_received();
     vector<MatchRecord> query_result;
     try {
         APSI_LOG_INFO("Sending APSI query");
@@ -134,6 +157,8 @@ int remote_query(const CLP &cmd)
         APSI_LOG_WARNING("Failed sending APSI query: " << ex.what());
         return -1;
     }
+    APSI_LOG_INFO("Communication R->S, RequestQuery: " << nice_byte_count(channel.bytes_sent() - comm_s_ck));
+    APSI_LOG_INFO("Communication S->R, RequestQuery: " << nice_byte_count(channel.bytes_received() - comm_r_ck));
 
     print_intersection_results(orig_items, items_vec, query_result, cmd.output_file());
     print_transmitted_data(channel);
@@ -195,20 +220,10 @@ void print_intersection_results(
 
 void print_transmitted_data(Channel &channel)
 {
-    auto nice_byte_count = [](uint64_t bytes) -> string {
-        stringstream ss;
-        if (bytes >= 10 * 1024) {
-            ss << bytes / 1024 << " KB";
-        } else {
-            ss << bytes << " B";
-        }
-        return ss.str();
-    };
-
     APSI_LOG_INFO("Communication R->S: " << nice_byte_count(channel.bytes_sent()));
     APSI_LOG_INFO("Communication S->R: " << nice_byte_count(channel.bytes_received()));
     APSI_LOG_INFO(
-        "Communication total: " << nice_byte_count(
+        "Communication all : " << nice_byte_count(
             channel.bytes_sent() + channel.bytes_received()));
 }
 

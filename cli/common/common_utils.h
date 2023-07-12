@@ -36,3 +36,5 @@ void print_timing_report(const apsi::util::Stopwatch &stopwatch);
 Throw an exception if the given file is invalid.
 */
 void throw_if_file_invalid(const std::string &file_name);
+
+std::string nice_byte_count(uint64_t bytes);
